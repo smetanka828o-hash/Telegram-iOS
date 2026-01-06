@@ -48,6 +48,7 @@ import DeviceModel
 import PhotoResources
 import GlassBackgroundComponent
 import ComponentDisplayAdapters
+import LiquidGlass
 import ChatInputAccessoryPanel
 import ChatInputAutocompletePanel
 import ChatTextInputSlowmodePlaceholderNode
@@ -247,7 +248,7 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private let counterTextNode: ImmediateTextNode
     
     public let menuButton: HighlightTrackingButtonNode
-    private let menuButtonBackgroundView: GlassBackgroundView
+    private let menuButtonBackgroundView: LiquidGlassButton
     private let menuButtonClippingNode: ASDisplayNode
     private let menuButtonIconNode: MenuIconNode
     private let menuButtonTextNode: ImmediateTextNode
@@ -261,8 +262,8 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
     private let sendAsCloseIconView: UIImageView
     
     public let attachmentButton: HighlightTrackingButton
-    public let attachmentButtonBackground: GlassBackgroundView
-    public let attachmentButtonIcon: GlassBackgroundView.ContentImageView
+    public let attachmentButtonBackground: LiquidGlassButton
+    public let attachmentButtonIcon: UIImageView
     private var commentsButtonIcon: RasterizedCompositionMonochromeLayer?
     private var commentsButtonCenterIcon: UIImageView?
     private var commentsButtonContentsLayer: RasterizedCompositionImageLayer?
@@ -661,8 +662,9 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.menuButton.clipsToBounds = true
         self.menuButton.cornerRadius = 16.0
         self.menuButton.accessibilityLabel = presentationInterfaceState.strings.Conversation_InputMenu
-        self.menuButtonBackgroundView = GlassBackgroundView()
+        self.menuButtonBackgroundView = LiquidGlassButton()
         self.menuButtonBackgroundView.isUserInteractionEnabled = false
+        self.menuButtonBackgroundView.bindStretch(to: self.menuButton.view)
         self.menuButtonClippingNode = ASDisplayNode()
         self.menuButtonClippingNode.clipsToBounds = true
         self.menuButtonClippingNode.isUserInteractionEnabled = false
@@ -688,11 +690,13 @@ public class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDeleg
         self.attachmentButton.accessibilityTraits = [.button]
         self.attachmentButton.isAccessibilityElement = true
         
-        self.attachmentButtonBackground = GlassBackgroundView(frame: CGRect())
+        self.attachmentButtonBackground = LiquidGlassButton(frame: CGRect())
         self.attachmentButtonBackground.contentView.addSubview(self.attachmentButton)
+        self.attachmentButtonBackground.bindStretch(to: self.attachmentButton)
         
-        self.attachmentButtonIcon = GlassBackgroundView.ContentImageView()
+        self.attachmentButtonIcon = UIImageView()
         self.attachmentButtonIcon.isUserInteractionEnabled = false
+        self.attachmentButtonIcon.image = PresentationResourcesChat.chatInputPanelAttachButtonImage(presentationInterfaceState.theme)?.withRenderingMode(.alwaysTemplate)
         self.attachmentButtonBackground.contentView.addSubview(self.attachmentButtonIcon)
         
         self.attachmentButtonDisabledNode = HighlightableButtonNode()

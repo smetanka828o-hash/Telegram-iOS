@@ -27,6 +27,8 @@ swift_library(
         "//submodules/AnimatedCountLabelNode",
         "//submodules/TelegramUI/Components/GlassBackgroundComponent",
         "//submodules/TelegramUI/Components/StarsParticleEffect",
+        "//submodules/TelegramUI/Components/LiquidGlass",
+
     ],
     visibility = [
         "//visibility:public",

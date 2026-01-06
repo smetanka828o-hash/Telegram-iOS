@@ -18,6 +18,7 @@ import AnimatedCountLabelNode
 import GlassBackgroundComponent
 import ComponentDisplayAdapters
 import StarsParticleEffect
+import LiquidGlass
 
 private final class EffectBadgeView: UIView {
     private let context: AccountContext
@@ -134,7 +135,7 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
     private let presentationContext: ChatPresentationContext?
     private let strings: PresentationStrings
     
-    public let micButtonBackgroundView: GlassBackgroundView
+    public let micButtonBackgroundView: LiquidGlassButton
     public let micButtonTintMaskView: UIImageView
     public let micButton: ChatTextInputMediaRecordingButton
     
@@ -149,8 +150,8 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
     public let textNode: ImmediateAnimatedCountLabelNode
     
     public let expandMediaInputButton: HighlightTrackingButton
-    public let expandMediaInputButtonBackgroundView: GlassBackgroundView
-    private let expandMediaInputButtonIcon: GlassBackgroundView.ContentImageView
+    public let expandMediaInputButtonBackgroundView: LiquidGlassButton
+    private let expandMediaInputButtonIcon: UIImageView
     
     private var effectBadgeView: EffectBadgeView?
     
@@ -166,8 +167,6 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
     private var micButtonPointerInteraction: PointerInteraction?
     private var sendButtonPointerInteraction: PointerInteraction?
     
-    let maskContentView: UIView
-    
     private var validLayout: CGSize?
     
     public var customSendColor: UIColor?
@@ -180,14 +179,13 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         let strings = presentationInterfaceState.strings
         self.strings = strings
         
-        self.micButtonBackgroundView = GlassBackgroundView()
-        self.maskContentView = UIView()
+        self.micButtonBackgroundView = LiquidGlassButton()
         
         self.micButtonTintMaskView = UIImageView()
         self.micButtonTintMaskView.tintColor = .black
         self.micButton = ChatTextInputMediaRecordingButton(context: context, theme: theme, pause: true, strings: strings, presentController: presentController)
         self.micButton.animationOutput = self.micButtonTintMaskView
-        self.micButtonBackgroundView.maskContentView.addSubview(self.micButtonTintMaskView)
+        self.micButtonBackgroundView.contentView.addSubview(self.micButtonTintMaskView)
         
         self.sendContainerNode = ASDisplayNode()
         self.sendContainerNode.layer.allowsGroupOpacity = true
@@ -200,13 +198,12 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         self.textNode.isUserInteractionEnabled = false
         
         self.expandMediaInputButton = HighlightTrackingButton()
-        self.expandMediaInputButtonBackgroundView = GlassBackgroundView()
-        self.expandMediaInputButtonIcon = GlassBackgroundView.ContentImageView()
+        self.expandMediaInputButtonBackgroundView = LiquidGlassButton()
+        self.expandMediaInputButtonIcon = UIImageView()
         self.expandMediaInputButtonBackgroundView.contentView.addSubview(self.expandMediaInputButtonIcon)
         self.expandMediaInputButtonBackgroundView.contentView.addSubview(self.expandMediaInputButton)
-        self.expandMediaInputButtonIcon.image = PresentationResourcesChat.chatInputPanelExpandButtonImage(presentationInterfaceState.theme)
+        self.expandMediaInputButtonIcon.image = PresentationResourcesChat.chatInputPanelExpandButtonImage(presentationInterfaceState.theme)?.withRenderingMode(.alwaysTemplate)
         self.expandMediaInputButtonIcon.tintColor = theme.chat.inputPanel.panelControlColor
-        self.expandMediaInputButtonIcon.setMonochromaticEffect(tintColor: theme.chat.inputPanel.panelControlColor)
         
         super.init()
         
@@ -236,21 +233,22 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         self.micButton.layer.allowsGroupOpacity = true
         self.view.addSubview(self.micButtonBackgroundView)
         self.micButtonBackgroundView.contentView.addSubview(self.micButton)
+        self.micButtonBackgroundView.bindStretch(to: self.micButton)
             
         self.addSubnode(self.sendContainerNode)
         self.sendContainerNode.view.addSubview(self.sendButtonBackgroundView)
         self.sendContainerNode.addSubnode(self.sendButton)
         self.sendContainerNode.addSubnode(self.textNode)
         self.view.addSubview(self.expandMediaInputButtonBackgroundView)
+        self.expandMediaInputButtonBackgroundView.bindStretch(to: self.expandMediaInputButton)
         
         self.expandMediaInputButton.highligthedChanged = { [weak self] highlighted in
             guard let self else {
                 return
             }
-            if highlighted {
-                self.expandMediaInputButton.layer.animateScale(from: 1.0, to: 0.75, duration: 0.4, removeOnCompletion: false)
-            } else if let presentationLayer = self.expandMediaInputButton.layer.presentation() {
-                self.expandMediaInputButton.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
+            self.expandMediaInputButtonBackgroundView.setHighlighted(highlighted, animated: true)
+            if !highlighted {
+                self.expandMediaInputButtonBackgroundView.bounce()
             }
         }
     }
@@ -275,7 +273,6 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
     public func updateTheme(theme: PresentationTheme, wallpaper: TelegramWallpaper) {
         self.micButton.updateTheme(theme: theme)
         self.expandMediaInputButtonIcon.tintColor = theme.chat.inputPanel.panelControlColor
-        self.expandMediaInputButtonIcon.setMonochromaticEffect(tintColor: theme.chat.inputPanel.panelControlColor)
     }
     
     private var absoluteRect: (CGRect, CGSize)?
@@ -345,9 +342,10 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         }
     
         transition.updateFrame(view: self.micButtonBackgroundView, frame: CGRect(origin: CGPoint(), size: size))
-        self.micButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark:  interfaceState.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: interfaceState.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), isInteractive: true, transition: ComponentTransition(transition))
+        self.micButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: interfaceState.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: interfaceState.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), transition: ComponentTransition(transition))
         
         transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(view: self.micButtonTintMaskView, frame: CGRect(origin: CGPoint(), size: size))
         self.micButton.layoutItems()
         
         let sendButtonBackgroundFrame = CGRect(origin: CGPoint(), size: innerSize).insetBy(dx: 3.0, dy: 3.0)
@@ -401,7 +399,7 @@ public final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessag
         
         transition.updateFrame(view: self.expandMediaInputButton, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(view: self.expandMediaInputButtonBackgroundView, frame: CGRect(origin: CGPoint(), size: size))
-        self.expandMediaInputButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: interfaceState.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: interfaceState.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), isInteractive: true, transition: ComponentTransition(transition))
+        self.expandMediaInputButtonBackgroundView.update(size: size, cornerRadius: size.height * 0.5, isDark: interfaceState.theme.overallDarkAppearance, tintColor: .init(kind: .panel, color: interfaceState.theme.chat.inputPanel.inputBackgroundColor.withMultipliedAlpha(0.7)), transition: ComponentTransition(transition))
         if let image = self.expandMediaInputButtonIcon.image {
             let expandIconFrame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) * 0.5), y: floor((size.height - image.size.height) * 0.5)), size: image.size)
             self.expandMediaInputButtonIcon.center = expandIconFrame.center

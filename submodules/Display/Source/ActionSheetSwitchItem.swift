@@ -54,11 +54,16 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
         self.label.truncationType = .end
         self.label.isAccessibilityElement = false
         
-        self.switchNode = SwitchNode()
+        if let switchClass = NSClassFromString("LiquidGlass.LiquidGlassSwitchNode") as? SwitchNode.Type {
+            self.switchNode = switchClass.init()
+        } else {
+            self.switchNode = SwitchNode()
+        }
         self.switchNode.frameColor = theme.switchFrameColor
         self.switchNode.contentColor = theme.switchContentColor
         self.switchNode.handleColor = theme.switchHandleColor
         self.switchNode.isAccessibilityElement = false
+        applyGlassStyleIfSupported(object: self.switchNode, isDark: theme.backgroundType == .dark, tintColor: theme.switchContentColor)
         
         self.accessibilityArea = AccessibilityAreaNode()
         

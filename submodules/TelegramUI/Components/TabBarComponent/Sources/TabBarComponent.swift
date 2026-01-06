@@ -10,7 +10,7 @@ import LottieComponent
 import UIKitRuntimeUtils
 import BundleIconComponent
 import TextBadgeComponent
-import LiquidLens
+import LiquidGlass
 import AppBundle
 import SearchBarNode
 import TabSelectionRecognizer
@@ -342,7 +342,21 @@ public final class TabBarComponent: Component {
     
     public final class View: UIView, UITabBarDelegate, UIGestureRecognizerDelegate {
         private let backgroundContainer: GlassBackgroundContainerView
-        private let liquidLensView: LiquidLensView
+        private struct SnapshotSignature: Equatable {
+            let size: CGSize
+            let isDark: Bool
+            let isSearchActive: Bool
+            let items: [ItemSignature]
+        }
+
+        private struct ItemSignature: Equatable {
+            let title: String?
+            let badge: String?
+            let imageId: ObjectIdentifier?
+            let selectedImageId: ObjectIdentifier?
+        }
+
+        private let liquidLensView: LiquidGlassLensView
         private let contextGestureContainerView: ContextControllerSourceView
         
         private var itemViews: [AnyHashable: ComponentView<Empty>] = [:]
@@ -355,6 +369,7 @@ public final class TabBarComponent: Component {
         
         private var component: TabBarComponent?
         private weak var state: EmptyComponentState?
+        private var snapshotSignature: SnapshotSignature?
 
         private var selectionGestureState: (startX: CGFloat, currentX: CGFloat, itemId: AnyHashable)?
         private var overrideSelectedItemId: AnyHashable?
@@ -365,7 +380,7 @@ public final class TabBarComponent: Component {
         
         public override init(frame: CGRect) {
             self.backgroundContainer = GlassBackgroundContainerView()
-            self.liquidLensView = LiquidLensView(kind: .externalContainer)
+            self.liquidLensView = LiquidGlassLensView()
             
             self.contextGestureContainerView = ContextControllerSourceView()
             self.contextGestureContainerView.isGestureEnabled = true
@@ -381,6 +396,7 @@ public final class TabBarComponent: Component {
             self.backgroundContainer.contentView.addSubview(self.contextGestureContainerView)
             
             self.contextGestureContainerView.addSubview(self.liquidLensView)
+            self.liquidLensView.snapshotSourceView = self.liquidLensView.contentView
             let tabSelectionRecognizer = TabSelectionRecognizer(target: self, action: #selector(self.onTabSelectionGesture(_:)))
             self.tabSelectionRecognizer = tabSelectionRecognizer
             self.contextGestureContainerView.addGestureRecognizer(tabSelectionRecognizer)
@@ -548,6 +564,9 @@ public final class TabBarComponent: Component {
             super.didMoveToWindow()
             
             self.state?.updated()
+            if self.window != nil {
+                self.liquidLensView.setNeedsSnapshotRefresh(immediate: true)
+            }
         }
         
         func update(component: TabBarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -720,6 +739,24 @@ public final class TabBarComponent: Component {
             lensSelection.x = max(0.0, min(lensSelection.x, lensSize.width - lensSelection.width))
             
             self.liquidLensView.update(size: lensSize, selectionOrigin: CGPoint(x: lensSelection.x, y: 0.0), selectionSize: CGSize(width: lensSelection.width, height: lensSize.height), inset: 4.0, isDark: component.theme.overallDarkAppearance, isLifted: self.selectionGestureState != nil, isCollapsed: isLensCollapsed, transition: transition)
+
+            let snapshotSignature = SnapshotSignature(
+                size: tabsSize,
+                isDark: component.theme.overallDarkAppearance,
+                isSearchActive: component.search?.isActive == true,
+                items: component.items.map { item in
+                    ItemSignature(
+                        title: item.item.title,
+                        badge: item.item.badgeValue,
+                        imageId: item.item.image.flatMap { ObjectIdentifier($0) },
+                        selectedImageId: item.item.selectedImage.flatMap { ObjectIdentifier($0) }
+                    )
+                }
+            )
+            if self.snapshotSignature != snapshotSignature {
+                self.snapshotSignature = snapshotSignature
+                self.liquidLensView.setNeedsSnapshotRefresh(immediate: transition.animation.isImmediate)
+            }
 
             var size = tabsSize
 
